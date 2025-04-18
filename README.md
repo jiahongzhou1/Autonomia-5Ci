@@ -1,9 +1,6 @@
-# Autonomia-5Ci
+# Autonomia-5Ci-
+progetto di autonomia , utilizzo di TCP e UDP
 
-Creazione di un'applicazione Excalidraw-like
 
-# Librerie usate
-
-## PyQt5
-
-- pip install PyQt5
+# Fonti
+- https://www.pythonguis.com/tutorials/pyqt-basic-widgets/
