@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <canvas
+      id="board"
+      width="800"
+      height="600"
+      style="border: 1px solid #000"
+    ></canvas>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+      const socket = io();
+      const canvas = document.getElementById("board");
+      const ctx = canvas.getContext("2d");
+      let drawing = false;
+
+      // Mouse events
+      canvas.addEventListener("mousedown", () => (drawing = true));
+      canvas.addEventListener("mouseup", () => (drawing = false));
+      canvas.addEventListener("mousemove", drawMouse);
+
+      // Touch events
+      canvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        drawing = true;
+        drawTouch(e);
+      });
+      canvas.addEventListener("touchend", () => (drawing = false));
+      canvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        drawTouch(e);
+      });
+
+      function drawMouse(e) {
+        if (!drawing) return;
+        const x = e.offsetX;
+        const y = e.offsetY;
+        drawAndEmit(x, y);
+      }
+
+      function drawTouch(e) {
+        if (!drawing) return;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        drawAndEmit(x, y);
+      }
+
+      function drawAndEmit(x, y) {
+        ctx.fillRect(x, y, 2, 2);
+        socket.emit("draw", { x, y });
+      }
+
+      socket.on("draw", ({ x, y }) => {
+        ctx.fillRect(x, y, 2, 2);
+      });
+    </script>
+  </body>
+</html>
