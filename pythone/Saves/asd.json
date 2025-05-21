@@ -44620,5 +44620,86 @@
         "end_y": 151,
         "color": "#ff0026",
         "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 695,
+        "start_y": 93,
+        "end_x": 695,
+        "end_y": 94,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 695,
+        "start_y": 94,
+        "end_x": 689,
+        "end_y": 118,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 689,
+        "start_y": 118,
+        "end_x": 686,
+        "end_y": 156,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 686,
+        "start_y": 156,
+        "end_x": 684,
+        "end_y": 165,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 95,
+        "start_y": 36,
+        "end_x": 96,
+        "end_y": 36,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 96,
+        "start_y": 36,
+        "end_x": 165,
+        "end_y": 35,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 165,
+        "start_y": 35,
+        "end_x": 294,
+        "end_y": 33,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 294,
+        "start_y": 33,
+        "end_x": 397,
+        "end_y": 27,
+        "color": "#0000ff",
+        "size": 3
+    },
+    {
+        "type": "draw",
+        "start_x": 397,
+        "start_y": 27,
+        "end_x": 420,
+        "end_y": 26,
+        "color": "#0000ff",
+        "size": 3
     }
 ]
