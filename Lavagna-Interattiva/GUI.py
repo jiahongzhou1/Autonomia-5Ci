@@ -51,11 +51,6 @@ class ClickableFrame(QFrame):
         # Call the base class method to ensure normal event processing continues
         super().mousePressEvent(event)
 
-    def get_filename(self):
-        """Returns the original filename associated with this box."""
-        return self.original_filename
-
-
 class FileBrowserWindow(QMainWindow):
     """Main window for the file browser application."""
 

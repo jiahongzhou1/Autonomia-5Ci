@@ -198,13 +198,7 @@ class PaintClient(QMainWindow):
                 sys.exit(1)
 
         self.listen_thread = None
-    #? 
-    def get_fileName(self):
-        return self.fileName
-    #?
-    def get_pathName(self):
-        return self.pathName
-    #?
+
     def resizeEvent(self, event):
         """Handles window resize events."""
         # The QScrollArea handles displaying the fixed-size canvas within the resized window.
