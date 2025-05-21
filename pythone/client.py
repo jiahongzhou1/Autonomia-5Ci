@@ -19,11 +19,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import pyqtSignal, Qt, QSize
-# Client Configuration
-# CLIENT_HOST = '100.104.236.29'
-#?
-CLIENT_HOST = '127.0.0.1'
-CLIENT_PORT = 5000
 
 # Define a fixed large size for the canvas
 FIXED_CANVAS_WIDTH = 2000
@@ -63,7 +58,7 @@ def decode_message(data):
 # Inherit from QmainWindow
 class PaintClient(QMainWindow):
     """Main window for the paint client application."""
-
+    socketLost = pyqtSignal(bool)
     def __init__(self):
         # call the parent constructor
         super().__init__()
@@ -180,10 +175,8 @@ class PaintClient(QMainWindow):
         self.drawing = False # tells if we are drawing
         # self.addText = False # Assuming these are for future features
         # self.addGeometry = False
-
         
         self.socketLost.connect(self.onDisconnect)
-
 
         self.dragging = False # tells if we are dragging
         self.drag_start_pos = None
@@ -267,9 +260,12 @@ class PaintClient(QMainWindow):
         self.canvas.setPixmap(temp_pixmap)
         self.canvas.update()
 
+    def onDisconnect(self):
+        QMessageBox.warning(self,"Chiusura Applicazione","Connesione con l'host perso")
+        time.sleep(1)
+        QApplication.quit()
+
     def listen_server(self):
-        """Listens for data from the server in a separate thread."""
-        buffer = "" # Use a buffer to handle partial messages
         while True:
             if not self.is_socket_alive():
                 self.socketLost.emit(True)
@@ -282,7 +278,7 @@ class PaintClient(QMainWindow):
                 if not data:
                     print("Server disconnected.")
                     break
-                messages = data.split(';') 
+                messages = data.split(';')
                 for message in messages:
                     if message:
                         decoded_message = decode_message(message.strip())
@@ -305,6 +301,27 @@ class PaintClient(QMainWindow):
             except Exception as e:
                 print(f"Error receiving data from server: {e}")
                 break
+
+    def is_socket_alive(self):
+        """Checks if the TCP socket is still alive (portable)."""
+        if self.socket is None:
+            return False
+        try:
+            # Try sending a 0-byte message
+            self.socket.send(b'')
+            return True
+        except socket.error as e:
+            # Common errors indicating disconnection
+            if e.errno in (errno.ECONNRESET, errno.ENOTCONN, errno.EPIPE, errno.EBADF): # EBADF for bad file descriptor
+                return False
+            # For non-blocking sockets, a "would block" error isn't a disconnection
+            if e.errno == errno.EAGAIN or e.errno == errno.EWOULDBLOCK or e.errno == 10035: # Windows WSAEWOULDBLOCK
+                return True
+            print(f"Socket check failed with unexpected error: {e}")
+            return False
+        except Exception as e:
+            print(f"Unexpected error during socket liveness check: {e}")
+            return False
 
     def mousePressEvent(self, event: QMouseEvent):
         # canvas_pos = self.canvas.mapFromParent(event.pos()) # this gives relative position and its related to parent
