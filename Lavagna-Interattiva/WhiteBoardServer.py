@@ -2,12 +2,6 @@ import socket
 import threading
 
 class WhiteboardServer:
-    """
-    A simple TCP server for a collaborative whiteboard application.
-    It handles client connections, decodes drawing messages,
-    and broadcasts them to all other connected clients.
-    """
-
     def __init__(self, drawing_history, host='0.0.0.0', port=5000):
         """
         Initializes the WhiteboardServer with a specified host and port.
@@ -15,7 +9,7 @@ class WhiteboardServer:
         Args:
             drawing_history (list): A list to store drawing commands.
             host (str): The IP address the server will listen on.
-                        '0.0.0.0' means listen on all available interfaces.
+            '0.0.0.0' means listen on all available interfaces.
             port (int): The port number the server will listen on.
         """
         self.drawing_history = drawing_history
@@ -54,8 +48,8 @@ class WhiteboardServer:
 
         Returns:
             tuple or None: A tuple containing (message_type, start_x, start_y,
-                           end_x, end_y, color, size) if decoding is successful,
-                           otherwise None.
+                            end_x, end_y, color, size) if decoding is successful,
+                            otherwise None.
         """
         parts = data.split(',')
         if len(parts) == 7:

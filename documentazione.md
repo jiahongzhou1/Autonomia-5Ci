@@ -6,15 +6,23 @@ La nostra applicazione offre una lavagna condivisa tramite un launcher. Dal laun
 
 ### risorse "native" di python
 
--`os / sys` -`os`
-Interagisci con il sistema operativo per operazioni su file, directory, processi, ecc. -`sys`
-Accedi a variabili e funzionalità specifiche dell'interprete Python (argomenti riga di comando, percorsi, ecc.). -`threading`
-Esegui codice in parallelo usando i thread all'interno di un singolo processo. Utile per migliorare la reattività e sfruttare CPU multi-core. -`socket`
-Crea applicazioni di rete (client e server) per comunicare tramite protocolli come TCP/IP. Fornisce un'interfaccia di basso livello per le reti. -`json`
-Serializza oggetti Python in formato JSON (stringhe) e deserializza stringhe JSON in oggetti Python. Fondamentale per lo scambio di dati. -`math`
-Offre un insieme di funzioni matematiche standard (trigonometriche, logaritmiche, ecc.) e costanti (pi greco, e). -`time`
-Fornisce strumenti per misurare il tempo, mettere in pausa l'esecuzione e lavorare con date e orari. -`errno`
-Definisce costanti simboliche per i codici di errore restituiti da chiamate di sistema, utili per una gestione più precisa degli errori di basso livello.
+- `os / sys`
+  - `os`
+      Interagisci con il sistema operativo per operazioni su file, directory, processi, ecc.
+  - `sys`
+    Accedi a variabili e funzionalità specifiche dell'interprete Python (argomenti riga di comando, percorsi, ecc.).
+- `threading`
+  Esegui codice in parallelo usando i thread all'interno di un singolo processo. Utile per migliorare la reattività e sfruttare CPU multi-core.
+- `socket`
+  Crea applicazioni di rete (client e server) per comunicare tramite protocolli come TCP/IP. Fornisce un'interfaccia di basso livello per le reti.
+- `json`
+  Serializza oggetti Python in formato JSON (JS Object notation) e deserializza stringhe JSON in oggetti Python. Fondamentale per lo scambio di dati.
+- `math`
+  Offre un insieme di funzioni matematiche standard (trigonometriche, logaritmiche, ecc.) e costanti (pi greco, e).
+- `time`
+  Fornisce strumenti per misurare il tempo, mettere in pausa l'esecuzione e lavorare con date e orari.
+- `errno`
+  Definisce costanti simboliche per i codici di errore restituiti da chiamate di sistema, utili per una gestione più precisa degli errori di basso livello.
 
 ### libreri esterne
 

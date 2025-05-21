@@ -78,7 +78,7 @@ class FileBrowserWindow(QMainWindow):
         # --- Server Connection Box ---
         server_connect_frame = QFrame(self)
         server_connect_frame.setFrameShape(QFrame.StyledPanel)
-        server_connect_layout = QHBoxLayout(server_connect_frame)
+        server_connect_layout = QHBoxLayout(server_connect_frame) #dice che tutti i componenti di server server_connect_frame finiranno detro server_connect_layout
         server_connect_layout.setContentsMargins(10, 10, 10, 10)
         server_connect_layout.setSpacing(10)
 

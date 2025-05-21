@@ -8,17 +8,11 @@ import time
 import errno
 from WhiteBoardServer import WhiteboardServer
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSizePolicy, QVBoxLayout, QWidget, QScrollArea, QColorDialog, QPushButton , QMessageBox, QInputDialog# Import QScrollArea
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QSizePolicy, QVBoxLayout, QWidget,
+                            QScrollArea, QColorDialog, QPushButton, QMessageBox , QComboBox , QHBoxLayout,QSlider, QHBoxLayout)
 from PyQt5.QtGui import QPainter, QPen, QPixmap, QColor, QMouseEvent, QCloseEvent
-from PyQt5.QtCore import Qt, QPoint, QRect, QMetaObject
+from PyQt5.QtCore import Qt, QPoint, QRect , QSize , pyqtSignal
 
-
-from PyQt5.QtWidgets import (
-    QWidget, QLabel, QVBoxLayout, QPushButton, QColorDialog,
-    QSlider, QComboBox, QHBoxLayout
-)
-from PyQt5.QtGui import QColor
-from PyQt5.QtCore import pyqtSignal, Qt, QSize
 
 # Define a fixed large size for the canvas
 FIXED_CANVAS_WIDTH = 2000
@@ -64,7 +58,7 @@ class PaintClient(QMainWindow):
         super().__init__()
         # set the window title to Collaborative paint, this function is defined in QWidget which is parent class of QMainWindow
         self.setWindowTitle("Collaborative Paint")
-        # Set the initial window size, also comes from QWidget    
+        # Set the initial window size, also comes from QWidget
         self.setGeometry(100, 100, 800, 600)
 
         # Create a central widget and a layout
@@ -113,11 +107,11 @@ class PaintClient(QMainWindow):
                     data_list = json.load(f)
                     if(data_list):
                         self.drawing_history = data_list
-                print(f"Successfully read data from '{self.pathName}'")                
+                print(f"Successfully read data from '{self.pathName}'")
             elif not os.path.exists(self.pathName):
                 print(f"Error: The file '{self.pathName}' was not found.")
             else: # File exists but is empty
-                print(f"Warning: The file '{self.pathName}' is empty. Returning empty list.")            
+                print(f"Warning: The file '{self.pathName}' is empty. Returning empty list.")
 
         except json.JSONDecodeError:
             # This exception is raised if the file contains invalid JSON
@@ -186,7 +180,6 @@ class PaintClient(QMainWindow):
 
         print(self.ipAddress)
         if(self.ipAddress != "127.0.0.1"):
-            print("Bomboclat")
             try:
                 self.socket.connect((self.ipAddress, int(self.remotePort)))
                 self.listen_thread = threading.Thread(target=self.listen_server, daemon=True)
@@ -194,7 +187,6 @@ class PaintClient(QMainWindow):
             except Exception as e:
                 print(f"Error connecting to server at {self.ipAddress}:{self.remotePort}: {e}")
                 print("Please make sure the server is running and the host/port are correct.")
-                print("PORCO DIO")
                 sys.exit(1)
 
         self.listen_thread = None
@@ -348,8 +340,6 @@ class PaintClient(QMainWindow):
     def mousePressEvent(self, event: QMouseEvent):
         # canvas_pos = self.canvas.mapFromParent(event.pos()) # this gives relative position and its related to parent
         canvas_pos = self.canvas.mapFromGlobal(event.globalPos()) # this one gives absolute position on the screen
-
-        print("A") 
         # check if the pressed area is inside the canva
         if event.button() == Qt.LeftButton and self.canvas.geometry().contains(event.pos()):
             if self.current_shape == "Freehand":
@@ -374,7 +364,6 @@ class PaintClient(QMainWindow):
         canvas_pos = self.canvas.mapFromGlobal(event.globalPos())
         if not self.is_socket_alive():
             self.socketLost.emit(True)
-        print("B")
         if self.drawing and self.last_point is not None and self.current_shape == "Freehand":
             # Check if the move is within the canvas bounds
             if self.canvas.geometry().contains(event.pos()):
@@ -413,13 +402,13 @@ class PaintClient(QMainWindow):
 
                 self.last_point = current_point # Update last_point with the current absolute canvas coordinate
 
-        elif getattr(self, "drawing_shape", False):
+        elif getattr(self, "drawing_shape", False): #prewie delle forme geometriche (es QUAD )
             self.temp_end_point = canvas_pos
             self.update_canvas(preview=True)  # Pass flag to show preview
 
         elif self.dragging and self.drag_start_pos is not None:
             # Calculate the movement delta
-            delta = event.pos() - self.drag_start_pos
+            delta = event.pos() - self.drag_start_pos #Quantita di spazio mosso è un QPOint (contine al suo interno solo la X e Y del punto)
 
             # Scroll the scroll area based on the drag delta
             self.scroll_area.horizontalScrollBar().setValue(self.scroll_area.horizontalScrollBar().value() - delta.x())
@@ -428,7 +417,7 @@ class PaintClient(QMainWindow):
             # Update the drag start position for the next move event
             self.drag_start_pos = event.pos()
 
-        super().mouseMoveEvent(event) # Call the base class implementation
+        super().mouseMoveEvent(event) # Call the base class implementation  (chiama classe padre QMouseEvent)
 
 
     def mouseReleaseEvent(self, event: QMouseEvent):
@@ -487,6 +476,7 @@ class PaintClient(QMainWindow):
 
     def on_shape_changed(self, shape: str):
         self.current_shape = shape
+
     # viene chiamato quando cerchiamo di chiudere la finestra
     def closeEvent(self, event: QCloseEvent):
             """
@@ -533,6 +523,7 @@ class PaintClient(QMainWindow):
                 elif reply == QMessageBox.Cancel:
                     event.ignore()
     # delete contents within the file
+    
     def clear_file(self,filepath):
         try:
             # Open the file in write mode ('w').
@@ -545,7 +536,14 @@ class PaintClient(QMainWindow):
         except Exception as e:
             print(f"Error clearing file '{filepath}': {e}")
 
+            # Here’s a breakdown of the mode argument:
 
+            # 'r': Read (default mode).
+            # 'w': Write (overwrites the file if it exists).
+            # 'a': Append (adds to the end of the file if it exists).
+            # 'b': Binary mode (e.g., 'rb' for reading binary files).
+            # 't': Text mode (default, e.g., 'rt' for reading text files).
+            # 'x': Exclusive creation (fails if the file already exists).
 
 class ToolStatusPanel(QWidget):
     # signal che avverte alla classe parente quando qualcosa cambia
@@ -553,10 +551,9 @@ class ToolStatusPanel(QWidget):
     brush_size_changed = pyqtSignal(int)
     shape_changed = pyqtSignal(str)
 
-    
 
-    def __init__(self,parent_instance, parent=None ):
-        super().__init__(parent)
+    def __init__(self,parent_instance):
+        super().__init__()
         self.parent_instance = parent_instance
         self.pathName = parent_instance.pathName
         self.fileName = parent_instance.fileName
@@ -683,9 +680,7 @@ class ToolStatusPanel(QWidget):
             self.parent_instance.serverThread = threading.Thread(target=self.parent_instance.server.start_server, daemon=True)
             self.parent_instance.serverThread.start()
             time.sleep(1)
-            #?
             try:
-                print(self.parent_instance.socket)
                 self.parent_instance.socket.connect((self.parent_instance.ipAddress, int(self.parent_instance.remotePort)))
             except Exception as e:
                 print(f"Error connecting to server at {self.parent_instance.ipAddress}:{self.parent_instance.remotePort}: {e}")
