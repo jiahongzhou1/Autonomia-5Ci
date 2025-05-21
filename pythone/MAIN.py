@@ -125,6 +125,7 @@ class WhiteboardServer:
                 break # Stop sending history if there's an error
         while True:
             data = conn.recv(4096).decode('utf-8')
+            print(data)
             if(not data):
                 continue
             # Process each message in the received data

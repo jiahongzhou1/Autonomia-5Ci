@@ -4,6 +4,7 @@ import threading
 import json
 import os
 import math
+import time
 
 from MAIN import WhiteboardServer
 
@@ -95,10 +96,11 @@ class PaintClient(QMainWindow):
         if (len(sys.argv) > 3):
             if(sys.argv[3]):
                 self.ipAddress = sys.argv[3]
+                print("IPIPIPIP" + self.ipAddress)
 
             if(sys.argv[4]):
                 self.remotePort = sys.argv[4]
-
+                print("PORTATATA" + self.remotePort)
         try:
             
             if os.path.exists(self.pathName) and os.path.getsize(self.pathName) > 0:
@@ -175,6 +177,7 @@ class PaintClient(QMainWindow):
         self.drag_start_pos = None
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         print(self.ipAddress)
         if(self.ipAddress != "127.0.0.1"):
             try:
@@ -254,7 +257,11 @@ class PaintClient(QMainWindow):
         buffer = "" # Use a buffer to handle partial messages
         while True:
             try:
-                data = self.socket.recv(4096).decode('utf-8')
+                data = ""
+                try:
+                    data = self.socket.recv(4096).decode('utf-8')
+                except Exception as e:
+                    pass
                 if not data:
                     print("Server disconnected.")
                     break
@@ -614,6 +621,7 @@ class ToolStatusPanel(QWidget):
             self.parent_instance.server = WhiteboardServer(self.parent_instance.drawing_history)
             self.parent_instance.serverThread = threading.Thread(target=self.parent_instance.server.start_server, daemon=True)
             self.parent_instance.serverThread.start()
+            time.sleep(5)
             try:
                 print(self.parent_instance.socket)
                 self.parent_instance.socket.connect((self.parent_instance.ipAddress, int(self.parent_instance.remotePort)))
