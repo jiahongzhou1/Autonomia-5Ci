@@ -51,6 +51,7 @@ class ClickableFrame(QFrame):
         # Call the base class method to ensure normal event processing continues
         super().mousePressEvent(event)
 
+
 class FileBrowserWindow(QMainWindow):
     """Main window for the file browser application."""
 

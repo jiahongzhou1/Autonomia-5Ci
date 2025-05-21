@@ -199,6 +199,7 @@ class PaintClient(QMainWindow):
 
         self.listen_thread = None
 
+
     def resizeEvent(self, event):
         """Handles window resize events."""
         # The QScrollArea handles displaying the fixed-size canvas within the resized window.

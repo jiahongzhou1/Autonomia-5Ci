@@ -23,6 +23,7 @@ class WhiteboardServer:
         self.port = port
         self.clients = []  # List to keep track of connected client sockets
         self.server_socket = None # To hold the main server socket
+        self.clients_lock = threading.Lock() 
 
     def encode_message(self, message_type, start_x, start_y, end_x, end_y, color, size):
         """
@@ -77,7 +78,8 @@ class WhiteboardServer:
             sender_conn (socket.socket): The socket of the client who sent the data.
         """
         # Create a list of clients to iterate over to avoid issues if clients are removed during iteration
-        clients_to_broadcast = list(self.clients)
+        with self.clients_lock:
+                clients_to_broadcast = list(self.clients)
         for client in clients_to_broadcast:
             if client != sender_conn:
                 try:
@@ -92,12 +94,13 @@ class WhiteboardServer:
         Args:
             client_socket (socket.socket): The socket of the client to remove.
         """
-        try:
-            if client_socket in self.clients:
-                self.clients.remove(client_socket)
-                client_socket.close()
-        except Exception as e:
-            print(f"[SERVER] Error removing client: {e}")
+        with self.clients_lock:
+            try:
+                if client_socket in self.clients:
+                    self.clients.remove(client_socket)
+                    client_socket.close()
+            except Exception as e:
+                    print(f"[SERVER] Error removing client: {e}")
 
 
     def handle_client(self, conn, addr):
@@ -156,9 +159,6 @@ class WhiteboardServer:
                     else:
                         print(f"[SERVER] Invalid message format from {addr}: {message}")
 
-        print(f"[-] Connection closed for: {addr}")
-        self.remove_client(conn) # Ensure client is removed on graceful or error-based disconnect
-
     def start_server(self):
         """
         Starts the main server loop, binding to the specified host and port,
@@ -181,7 +181,8 @@ class WhiteboardServer:
         while True:
             try:
                 conn, addr = self.server_socket.accept()
-                self.clients.append(conn)
+                with self.clients_lock:
+                    self.clients.append(conn)
                 # Start a new thread to handle the client connection
                 thread = threading.Thread(target=self.handle_client, args=(conn, addr), daemon=True)
                 thread.start()
