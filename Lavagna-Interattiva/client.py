@@ -6,7 +6,7 @@ import os
 import math
 import time
 import errno
-from LocalServer import WhiteboardServer
+from WhiteBoardServer import WhiteboardServer
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSizePolicy, QVBoxLayout, QWidget, QScrollArea, QColorDialog, QPushButton , QMessageBox, QInputDialog# Import QScrollArea
 from PyQt5.QtGui import QPainter, QPen, QPixmap, QColor, QMouseEvent, QCloseEvent
