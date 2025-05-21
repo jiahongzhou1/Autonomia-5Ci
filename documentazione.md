@@ -233,8 +233,13 @@ Il formato del messaggio è il seguente:
 #### FONTI
 
 - [Componenti pyqt5](https://www.riverbankcomputing.com/static/Docs/PyQt5/api/qtwidgets/qtwidgets-module.html)
+
 - [tutorial pyqt5](https://www.pythonguis.com/pyqt5-tutorial/)
+
 - [Gemini](https://gemini.google.com/app)
+
 - [Chat-GPT](https://chatgpt.com/)
+
 - [Tutorial_YT_MOLTO_NOIOSO](https://www.youtube.com/watch?v=92zx_U9Nzf4)
+
 - [Altro_Tutorial_YT](https://www.youtube.com/watch?v=E4WlUXrJgy4)

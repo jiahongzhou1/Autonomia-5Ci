@@ -669,16 +669,16 @@ class ToolStatusPanel(QWidget):
                     # Scrivi la stringa JSON nel file
                     file_oggetto.write(stringa_json)
 
-                print(f"\nStringa JSON salvata con successo in '{self.pathName}'")
+                print(f"\nString successfully saved in: '{self.pathName}'")
 
         except Exception as e:
-                    print(f"\nErrore durante il salvataggio della stringa JSON nel file: {e}")
+                    print(f"\nError during the save JSON: {e}")
         pass
 
     # divento il server e apro un thread che runna il server.
     def on_button2_clicked(self):
         if (self.parent_instance.server == None):
-            print("Attivato Server")
+            print("Server Activared")
             self.parent_instance.server = WhiteboardServer(self.parent_instance.drawing_history)
             self.parent_instance.serverThread = threading.Thread(target=self.parent_instance.server.start_server, daemon=True)
             self.parent_instance.serverThread.start()
