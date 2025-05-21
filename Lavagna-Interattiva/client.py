@@ -229,8 +229,20 @@ class PaintClient(QMainWindow):
             elif item['type'] == 'rectangle':
                 painter.drawRect(QRect(start, end))
             elif item['type'] == 'square':
-                side = min(abs(end.x() - start.x()), abs(end.y() - start.y()))
-                rect = QRect(start, QSize(side, side))
+                dx = item['end_x'] - item['start_x']
+                dy = item['end_y'] - item['start_y']
+                side = min(abs(dx), abs(dy))
+
+                if dx >= 0 and dy >= 0:
+                    top_left = QPoint(item['start_x'], item['start_y'])
+                elif dx < 0 and dy >= 0:
+                    top_left = QPoint(item['start_x'] - side, item['start_y'])
+                elif dx >= 0 and dy < 0:
+                    top_left = QPoint(item['start_x'], item['start_y'] - side)
+                else:  # dx < 0 and dy < 0
+                    top_left = QPoint(item['start_x'] - side, item['start_y'] - side)
+
+                rect = QRect(top_left, QSize(side, side))
                 painter.drawRect(rect)
             elif item['type'] == 'circle':
                 center = QPoint(start.x(),start.y())
@@ -246,8 +258,21 @@ class PaintClient(QMainWindow):
             if self.current_shape == "Rectangle":
                 painter.drawRect(rect) # this function auto converts 
             elif self.current_shape == "Square":
-                side = min(rect.width(), rect.height())
-                painter.drawRect(QRect(self.shape_start_point, QSize(side, side)))
+                dx = self.temp_end_point.x() - self.shape_start_point.x()
+                dy = self.temp_end_point.y() - self.shape_start_point.y()
+                side = min(abs(dx), abs(dy))
+
+                if dx >= 0 and dy >= 0:
+                    top_left = QPoint(self.shape_start_point.x(), self.shape_start_point.y())
+                elif dx < 0 and dy >= 0:
+                    top_left = QPoint(self.shape_start_point.x() - side, self.shape_start_point.y())
+                elif dx >= 0 and dy < 0:
+                    top_left = QPoint(self.shape_start_point.x(), self.shape_start_point.y() - side)
+                else:  # dx < 0 and dy < 0
+                    top_left = QPoint(self.shape_start_point.x() - side, self.shape_start_point.y() - side)
+
+                rect = QRect(top_left, QSize(side, side))
+                painter.drawRect(rect)
             elif self.current_shape == "Circle":
                 # find the radius with pitagoras theorem 
                 dx = self.temp_end_point.x() - self.shape_start_point.x()
@@ -581,7 +606,7 @@ class ToolStatusPanel(QWidget):
         brush_section_layout = QHBoxLayout() # Horizontal layout for brush controls
         self.size_label = QLabel()  # Text will be set by change_brush_size
         self.size_slider = QSlider(Qt.Horizontal)
-        self.size_slider.setRange(1, 30)
+        self.size_slider.setRange(1, 100)
         self.size_slider.valueChanged.connect(self.change_brush_size)
         
         brush_section_layout.addWidget(self.size_label)
