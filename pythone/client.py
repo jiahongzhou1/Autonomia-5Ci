@@ -180,6 +180,7 @@ class PaintClient(QMainWindow):
         self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         print(self.ipAddress)
         if(self.ipAddress != "127.0.0.1"):
+            print("Bomboclat")
             try:
                 self.socket.connect((self.ipAddress, int(self.remotePort)))
                 self.listen_thread = threading.Thread(target=self.listen_server, daemon=True)
@@ -447,31 +448,37 @@ class PaintClient(QMainWindow):
             # event.accept() # Allows the window to close
             # event.ignore() # Prevents the window from closing
 
+            if(self.ipAddress == "127.0.0.1"):
             # Example with confirmation:
-            reply = QMessageBox.question(self, 'Save Unsaved File', "Do you want to save before Quitting?",QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,QMessageBox.Cancel)
+                reply = QMessageBox.question(self, 'Save Unsaved File', "Do you want to save before Quitting?",QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,QMessageBox.Cancel)
+                if reply == QMessageBox.Yes:
+                    self.clear_file(self.pathName)
+                    stringa_json = json.dumps(self.drawing_history, indent=4, ensure_ascii=False)
+                    try:
+                        # Apri il file in modalitÃ  scrittura ('w').
+                        # Se il file esiste, il suo contenuto viene cancellato prima di scrivere.
+                        # Se il file non esiste, viene creato.
+                        # Usiamo encoding='utf-8' per gestire correttamente vari caratteri.
+                        with open(self.pathName, 'w', encoding='utf-8') as file_oggetto:
+                            # Scrivi la stringa JSON nel file
+                            file_oggetto.write(stringa_json)
 
-            if reply == QMessageBox.Yes:
-                self.clear_file(self.pathName)
-                stringa_json = json.dumps(self.drawing_history, indent=4, ensure_ascii=False)
-                try:
-                    # Apri il file in modalitÃ  scrittura ('w').
-                    # Se il file esiste, il suo contenuto viene cancellato prima di scrivere.
-                    # Se il file non esiste, viene creato.
-                    # Usiamo encoding='utf-8' per gestire correttamente vari caratteri.
-                    with open(self.pathName, 'w', encoding='utf-8') as file_oggetto:
-                        # Scrivi la stringa JSON nel file
-                        file_oggetto.write(stringa_json)
+                        print(f"\nStringa JSON salvata con successo in '{self.pathName}'")
 
-                    print(f"\nStringa JSON salvata con successo in '{self.pathName}'")
+                    except Exception as e:
+                        print(f"\nErrore durante il salvataggio della stringa JSON nel file: {e}")
+                    event.accept() # User confirmed, allow close
 
-                except Exception as e:
-                    print(f"\nErrore durante il salvataggio della stringa JSON nel file: {e}")
-                event.accept() # User confirmed, allow close
-
-            elif reply == QMessageBox.No:
-                event.accept()
+                elif reply == QMessageBox.No:
+                    event.accept()
+                else:
+                    event.ignore() # User cancelled, prevent close
             else:
-                event.ignore() # User cancelled, prevent close
+                reply = QMessageBox.question(self, 'Vuoi uscire dalla modalita condivisa?',QMessageBox.Yes | QMessageBox.Cancel,QMessageBox.Cancel)
+                if reply == QMessageBox.Yes:
+                    event.accept() # User confirmed, allow close
+                elif reply == QMessageBox.No:
+                    event.ignore()
 
     def clear_file(self,filepath):
         try:
@@ -505,6 +512,8 @@ class ToolStatusPanel(QWidget):
         self.button1 = QPushButton("Salva File", self)
         self.button2 = QPushButton("Stream File", self)
         self.button1.clicked.connect(self.on_button1_clicked)
+        if(self.parent_instance.ipAddress != "127.0.0.1"):
+            self.button1.setEnabled(False)
         self.button2.clicked.connect(self.on_button2_clicked)
         self.layout.addWidget(self.button1)
         self.layout.addWidget(self.button2)
