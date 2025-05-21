@@ -1,14 +1,31 @@
 import sys
 import socket
 import threading
+import json
+import os
+import math
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
-from PyQt5.QtGui import QPainter, QPen, QPixmap, QColor
-from PyQt5.QtCore import Qt, QPoint
+from MAIN import WhiteboardServer
 
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSizePolicy, QVBoxLayout, QWidget, QScrollArea, QColorDialog, QPushButton , QMessageBox, QInputDialog# Import QScrollArea
+from PyQt5.QtGui import QPainter, QPen, QPixmap, QColor, QMouseEvent, QCloseEvent
+from PyQt5.QtCore import Qt, QPoint, QRect, QMetaObject
+
+
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QVBoxLayout, QPushButton, QColorDialog,
+    QSlider, QComboBox, QHBoxLayout
+)
+from PyQt5.QtGui import QColor
+from PyQt5.QtCore import pyqtSignal, Qt, QSize
 # Client Configuration
-CLIENT_HOST = '100.104.236.29'
+# CLIENT_HOST = '100.104.236.29'
+CLIENT_HOST = '127.0.0.1'
 CLIENT_PORT = 5000
+
+# Define a fixed large size for the canvas
+FIXED_CANVAS_WIDTH = 2000
+FIXED_CANVAS_HEIGHT = 2000
 
 def encode_message(message_type, start_x, start_y, end_x, end_y, color, size):
     """Encodes drawing data into a string format."""
@@ -19,55 +36,248 @@ def decode_message(data):
     parts = data.split(',')
     if len(parts) == 7:
         message_type, start_x, start_y, end_x, end_y, color, size = parts
-        return (message_type, int(start_x), int(start_y), int(end_x), int(end_y), color, int(size))
-    else:
-        return None  # Handle invalid format/
+        # Ensure coordinates are within reasonable bounds before converting
+        try:
+            start_x = int(start_x)
+            start_y = int(start_y)
+            end_x = int(end_x)
+            end_y = int(end_y)
+            size = int(size)
+            # Basic validation to prevent drawing far outside the canvas
+            if not (0 <= start_x < FIXED_CANVAS_WIDTH and 0 <= start_y < FIXED_CANVAS_HEIGHT and
+                    0 <= end_x < FIXED_CANVAS_WIDTH and 0 <= end_y < FIXED_CANVAS_HEIGHT):
+                print(f"Warning: Received out-of-bounds coordinates: {data}")
+                return None # Ignore out-of-bounds drawing commands
 
+            return (message_type, start_x, start_y, end_x, end_y, color, size)
+        except ValueError:
+            print(f"Error converting drawing data to integers: {data}")
+            return None
+    else:
+        return None # Handle invalid format
 
 # Client Code
 class PaintClient(QMainWindow):
     """Main window for the paint client application."""
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Collaborative Paint")
-        self.setGeometry(100, 100, 800, 600)
-        self.canvas = QLabel(self)
-        self.canvas.setPixmap(QPixmap(800, 600))
-        self.canvas.pixmap().fill(Qt.white)
-        self.setCentralWidget(self.canvas)
 
-        self.brush_color = QColor(Qt.black)
-        self.brush_size = 3
+        self.setWindowTitle("Collaborative Paint")
+        self.setGeometry(100, 100, 800, 600) # Initial window size
+
+        # Create a central widget and a layout
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+        
+        # Create the canvas label
+        self.canvas = QLabel(self)
+        # Initialize pixmap with a fixed large size
+        self.canvas_pixmap = QPixmap(FIXED_CANVAS_WIDTH, FIXED_CANVAS_HEIGHT)
+        self.canvas_pixmap.fill(Qt.white)
+        self.canvas.setPixmap(self.canvas_pixmap)
+
+        self.canvas.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.canvas.adjustSize() 
+        
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        print(f'AA:{sys.argv}')
+        if(sys.argv[1]):
+                self.fileName = sys.argv[1]
+
+        if(sys.argv[2]):
+                self.pathName = sys.argv[2]
+
+        self.drawing_history = [] # Ã¨ un array di ogetti
+
+        print(len(sys.argv))
+        if (len(sys.argv) > 3):
+            if(sys.argv[3]):
+                self.ipAddress = sys.argv[3]
+
+            if(sys.argv[4]):
+                self.remotePort = sys.argv[4]
+
+        try:
+            
+            if os.path.exists(self.pathName) and os.path.getsize(self.pathName) > 0:
+                # Use 'with open(...) as f:' to ensure the file is automatically closed
+                # 'r' mode is for reading (default)
+                with open(self.pathName, 'r', encoding='utf-8') as f:
+                    # json.load() reads the JSON data from the file object (f)
+                    # and parses it into a Python object (which should be a list here)
+                    data_list = json.load(f)
+                    if(data_list):
+                        self.drawing_history = data_list
+                print(f"Successfully read data from '{self.pathName}'")                
+            elif not os.path.exists(self.pathName):
+                print(f"Error: The file '{self.pathName}' was not found.")
+            else: # File exists but is empty
+                print(f"Warning: The file '{self.pathName}' is empty. Returning empty list.")            
+
+        except json.JSONDecodeError:
+            # This exception is raised if the file contains invalid JSON
+            print(f"Error: Could not decode JSON from '{self.pathName}'. The file may be corrupted or not valid JSON.")
+        except Exception as e:
+            # Catch any other potential errors during file reading
+            print(f"An error occurred while reading the file '{self.pathName}': {e}")
+        
+        self.update_canvas()
+        
+        
+
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        # once we start the server the instance will be saved here
+        self.server = None
+        self.serverThread = None
+        
+        # Initialize ToolStatusPanel first as it handles tool selections
+        self.status_panel = ToolStatusPanel(parent_instance = self)
+        layout.addWidget(self.status_panel)
+
+        # Connect signals from ToolStatusPanel to PaintClient's handlers
+        self.status_panel.color_changed.connect(self.on_color_changed)
+        self.status_panel.brush_size_changed.connect(self.on_brush_size_changed)
+        self.status_panel.shape_changed.connect(self.on_shape_changed)       
+        
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(False) 
+        self.scroll_area.setWidget(self.canvas)
+
+        layout.addWidget(self.scroll_area)
+        central_widget.setLayout(layout)
+
+        # Brush settings are now primarily managed through ToolStatusPanel's signals
+        # Initialize default brush color and size here, which can be updated by ToolStatusPanel
+        self.brush_color = self.status_panel.get_color() # Get initial color from panel
+        self.brush_size = 3 # Default, will be updated by panel
+        self.current_shape = self.status_panel.get_shape() # Get initial shape
+        self.drawing_shape = False
+        self.shape_start_point = None
+        self.shape_temp_end_point = None
+        # Remove or comment out the redundant color button from PaintClient
+        # self.color_button = QPushButton("Choose Color", self)
+        # self.color_button.clicked.connect(self.setColor) # This was the problematic line
+        # layout.addWidget(self.color_button) 
+
         self.last_point = None
         self.drawing = False
+        # self.addText = False # Assuming these are for future features
+        # self.addGeometry = False
+
+
+
+
+        self.dragging = False
+        self.drag_start_pos = None
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            self.socket.connect((CLIENT_HOST, CLIENT_PORT))
-        except Exception as e:
-            print(f"Error connecting to server at {CLIENT_HOST}:{CLIENT_PORT}: {e}")
-            print("Please make sure the server is running and the host/port are correct.")
-            sys.exit(1)
+        print(self.ipAddress)
+        if(self.ipAddress != "127.0.0.1"):
+            try:
+                self.socket.connect((self.ipAddress, int(self.remotePort)))
+                self.listen_thread = threading.Thread(target=self.listen_server, daemon=True)
+                self.listen_thread.start()
+            except Exception as e:
+                print(f"Error connecting to server at {self.ipAddress}:{self.remotePort}: {e}")
+                print("Please make sure the server is running and the host/port are correct.")
+                print("PORCO DIO")
+                sys.exit(1)
 
-        self.listen_thread = threading.Thread(target=self.listen_server, daemon=True)
-        self.listen_thread.start()
+        self.listen_thread = None
+        
+    def get_fileName(self):
+        return self.fileName
+
+    def get_pathName(self):
+        return self.pathName
+
+    def resizeEvent(self, event):
+        """Handles window resize events."""
+        # The QScrollArea handles displaying the fixed-size canvas within the resized window.
+        # No need to redraw the pixmap here.
+        super().resizeEvent(event) # Call the base class implementation
+
+    def update_canvas(self, preview=False):
+        temp_pixmap = QPixmap(self.canvas_pixmap.size())
+        temp_pixmap.fill(Qt.white)
+
+        painter = QPainter(temp_pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        for item in self.drawing_history:
+            pen = QPen(QColor(item['color']), item['size'], Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            painter.setPen(pen)
+            start = QPoint(item['start_x'], item['start_y'])
+            end = QPoint(item['end_x'], item['end_y'])
+
+            if item['type'] == 'draw':
+                painter.drawLine(start, end)
+            elif item['type'] == 'rectangle':
+                painter.drawRect(QRect(start, end))
+            elif item['type'] == 'square':
+                side = min(abs(end.x() - start.x()), abs(end.y() - start.y()))
+                rect = QRect(start, QSize(side, side))
+                painter.drawRect(rect)
+            elif item['type'] == 'circle':
+                center = QPoint(start.x(),start.y())
+                radius = int(math.sqrt(pow(start.x()-end.x(),2)+(pow(start.y()-end.y(),2))))
+                painter.drawEllipse(center, radius, radius)
+
+        # Live preview of shape
+        if preview and getattr(self, "drawing_shape", False) and hasattr(self, "temp_end_point"):
+            pen = QPen(self.brush_color, self.brush_size, Qt.DashLine)
+            painter.setPen(pen)
+            rect = QRect(self.shape_start_point, self.temp_end_point)
+
+            if self.current_shape == "Rectangle":
+                painter.drawRect(rect)
+            elif self.current_shape == "Square":
+                side = min(rect.width(), rect.height())
+                painter.drawRect(QRect(self.shape_start_point, QSize(side, side)))
+            elif self.current_shape == "Circle":
+                dx = self.temp_end_point.x() - self.shape_start_point.x()
+                dy = self.temp_end_point.y() - self.shape_start_point.y()
+                radius = int(math.sqrt((dx*dx)+(dy*dy)))
+                center = self.shape_start_point
+                painter.drawEllipse(center, radius, radius)
+
+        painter.end()
+        self.canvas.setPixmap(temp_pixmap)
+        self.canvas.update()
 
     def listen_server(self):
         """Listens for data from the server in a separate thread."""
+        buffer = "" # Use a buffer to handle partial messages
         while True:
             try:
-                data = self.socket.recv(4096).decode('utf-8') # Receive as string
+                data = self.socket.recv(4096).decode('utf-8')
                 if not data:
                     print("Server disconnected.")
                     break
-                print(f"DATA RAW {data}")
-                messages = data.split(';') #split the messages
+                buffer += data # Add received data to buffer
+                messages = buffer.split(';') # Split buffer by message delimiter
+                buffer = messages.pop() # Keep the last (potentially incomplete) message in buffer
+
                 for message in messages:
                     if message:
                         decoded_message = decode_message(message.strip())
                         if decoded_message:
-                            self.draw_remote(*decoded_message)
-                            
+                            # Append remote drawing to history and update canvas
+                            self.drawing_history.append({
+                                'type': decoded_message[0],
+                                'start_x': decoded_message[1],
+                                'start_y': decoded_message[2],
+                                'end_x': decoded_message[3],
+                                'end_y': decoded_message[4],
+                                'color': decoded_message[5],
+                                'size': decoded_message[6]
+                            }) 
+                            if(not self.drawing):
+                                self.update_canvas()
                         else:
                             print(f"Error decoding message: {message}")
 
@@ -75,57 +285,350 @@ class PaintClient(QMainWindow):
                 print(f"Error receiving data from server: {e}")
                 break
 
-    def draw_remote(self, message_type, start_x, start_y, end_x, end_y, color, size):
-        """Draws on the canvas based on data received from the server."""
-        if message_type == "draw":
-            painter = QPainter(self.canvas.pixmap())
-            pen = QPen(QColor(color), size, Qt.SolidLine)
-            painter.setPen(pen)
-            start = QPoint(start_x, start_y)
-            end = QPoint(end_x, end_y)
-            painter.drawLine(start, end)
-            painter.end()
-            self.canvas.update()
+    def mousePressEvent(self, event: QMouseEvent):
+        # canvas_pos = self.canvas.mapFromParent(event.pos())
+        canvas_pos = self.canvas.mapFromGlobal(event.globalPos())
 
-    def mousePressEvent(self, event):
-        """Handles mouse press events for drawing."""
+        print("A")
+        if event.button() == Qt.LeftButton and self.canvas.geometry().contains(event.pos()):
+            if self.current_shape == "Freehand":
+                self.drawing = True
+                self.last_point = canvas_pos
+            elif self.current_shape == "Text": # Handle text input
+                self.handle_text_input(canvas_pos)
+            else:
+                self.shape_start_point = canvas_pos
+                self.drawing_shape = True
+
+        elif event.button() == Qt.RightButton:
+            self.dragging = True
+            self.drag_start_pos = event.pos()
+            QApplication.setOverrideCursor(Qt.ClosedHandCursor)
+
+        super().mousePressEvent(event)
+
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        """Handles mouse move events for drawing and dragging."""
+        # Get the position relative to the canvas widget
+        canvas_pos = self.canvas.mapFromGlobal(event.globalPos())
+        print("B")
+        if self.drawing and self.last_point is not None and self.current_shape == "Freehand":
+            # Check if the move is within the canvas bounds
+            if self.canvas.geometry().contains(event.pos()):
+                current_point = canvas_pos # Point relative to canvas absolute coords
+
+                # Add the current line segment to the drawing history
+                self.drawing_history.append({
+                    'type': 'draw',
+                    'start_x': self.last_point.x(),
+                    'start_y': self.last_point.y(),
+                    'end_x': current_point.x(),
+                    'end_y': current_point.y(),
+                    'color': self.brush_color.name(), # Store color as hex string
+                    'size': self.brush_size
+                })
+
+
+                # Update the canvas to show the newly added line
+                self.update_canvas()
+
+                # Encode and send the drawing data to the server (using absolute canvas coordinates)
+                message = encode_message(
+                    "draw",
+                    self.last_point.x(),
+                    self.last_point.y(),
+                    current_point.x(),
+                    current_point.y(),
+                    self.brush_color.name(), # Send color as hex string
+                    self.brush_size
+                )
+                try:
+                    self.socket.sendall((message).encode('utf-8'))
+
+                except Exception as e:
+                    print(f"Error sending data to server: {e}")
+
+                self.last_point = current_point # Update last_point with the current absolute canvas coordinate
+
+        elif getattr(self, "drawing_shape", False):
+            self.temp_end_point = canvas_pos
+            self.update_canvas(preview=True)  # Pass flag to show preview
+
+        elif self.dragging and self.drag_start_pos is not None:
+            # Calculate the movement delta
+            delta = event.pos() - self.drag_start_pos
+
+            # Scroll the scroll area based on the drag delta
+            self.scroll_area.horizontalScrollBar().setValue(self.scroll_area.horizontalScrollBar().value() - delta.x())
+            self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().value() - delta.y())
+
+            # Update the drag start position for the next move event
+            self.drag_start_pos = event.pos()
+
+        super().mouseMoveEvent(event) # Call the base class implementation
+
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
-            self.drawing = True
-            self.last_point = event.pos()
+            if self.current_shape != "Freehand" and getattr(self, "drawing_shape", False):
+                ### perche abbiamo usato mapfromglobal invece di mapfromparent
+                end_point = self.canvas.mapFromGlobal(event.globalPos())
+                self.drawing_shape = False
 
-    def mouseMoveEvent(self, event):
-        """Handles mouse move events for drawing."""
-        if self.drawing and self.last_point:
-            painter = QPainter(self.canvas.pixmap())
-            pen = QPen(self.brush_color, self.brush_size, Qt.SolidLine)
-            painter.setPen(pen)
-            painter.drawLine(self.last_point, event.pos())
-            painter.end()
-            self.canvas.update()
+                start_x, start_y = self.shape_start_point.x(), self.shape_start_point.y()
+                end_x, end_y = end_point.x(), end_point.y()
 
-            message = encode_message(
-                "draw",
-                self.last_point.x(),
-                self.last_point.y(),
-                event.pos().x(),
-                event.pos().y(),
-                # .name() Ritorna il colore in formato esadecimale esempio #AAAAAA
-                self.brush_color.name(),
-                self.brush_size
-            )
+                self.drawing_history.append({
+                    'type': self.current_shape.lower(),
+                    'start_x': start_x,
+                    'start_y': start_y,
+                    'end_x': end_x,
+                    'end_y': end_y,
+                    'color': self.brush_color.name(),
+                    'size': self.brush_size
+                })
+
+
+                message = encode_message(
+                    self.current_shape.lower(),
+                    start_x, start_y, end_x, end_y,
+                    self.brush_color.name(), self.brush_size
+                )
+                try:
+                    self.socket.sendall(message.encode('utf-8'))
+
+                except Exception as e:
+                    print(f"Error sending shape data: {e}")
+
+                self.update_canvas()
+
+            else:
+                self.drawing = False
+                self.last_point = None
+
+        elif event.button() == Qt.RightButton:
+            self.dragging = False
+            self.drag_start_pos = None
+            QApplication.restoreOverrideCursor()
+
+        super().mouseReleaseEvent(event)
+    
+    # definire le funzioni che gestiscono le risposte da tool bar
+    def on_color_changed(self, color: QColor):
+        self.brush_color = color
+
+    def on_brush_size_changed(self, size: int):
+        self.brush_size = size
+
+    def on_shape_changed(self, shape: str):
+        print("Selected shape in PaintClient:", shape)
+        self.current_shape = shape
+        print(shape)
+        # Implement drawing logic based on self.current_shape in mouse events
+        # For example, if shape is "Rectangle", mousePress might store the start point,
+        # and mouseRelease might draw the rectangle.
+
+    def closeEvent(self, event: QCloseEvent):
+            """
+            This method is called when the window is about to be closed.
+            """
+            # Your code to run when the window is closing goes here
+            print("Close event received.")
+
+            # You must either accept or ignore the event
+            # event.accept() # Allows the window to close
+            # event.ignore() # Prevents the window from closing
+
+            # Example with confirmation:
+            reply = QMessageBox.question(self, 'Save Unsaved File', "Do you want to save before Quitting?",QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,QMessageBox.Cancel)
+
+            if reply == QMessageBox.Yes:
+                self.clear_file(self.pathName)
+                stringa_json = json.dumps(self.drawing_history, indent=4, ensure_ascii=False)
+                try:
+                    # Apri il file in modalitÃ  scrittura ('w').
+                    # Se il file esiste, il suo contenuto viene cancellato prima di scrivere.
+                    # Se il file non esiste, viene creato.
+                    # Usiamo encoding='utf-8' per gestire correttamente vari caratteri.
+                    with open(self.pathName, 'w', encoding='utf-8') as file_oggetto:
+                        # Scrivi la stringa JSON nel file
+                        file_oggetto.write(stringa_json)
+
+                    print(f"\nStringa JSON salvata con successo in '{self.pathName}'")
+
+                except Exception as e:
+                    print(f"\nErrore durante il salvataggio della stringa JSON nel file: {e}")
+                event.accept() # User confirmed, allow close
+
+            elif reply == QMessageBox.No:
+                event.accept()
+            else:
+                event.ignore() # User cancelled, prevent close
+
+    def clear_file(self,filepath):
+        try:
+            # Open the file in write mode ('w').
+            # This truncates the file if it exists or creates it if it doesn't.
+            # Using 'with' ensures the file is closed automatically.
+            with open(filepath, 'w', encoding='utf-8') as f:
+                pass # We don't need to write anything, just opening in 'w' clears it
+
+            print(f"File '{filepath}' has been cleared.")
+        except Exception as e:
+            print(f"Error clearing file '{filepath}': {e}")
+
+
+
+class ToolStatusPanel(QWidget):
+    color_changed = pyqtSignal(QColor)
+    brush_size_changed = pyqtSignal(int)
+    shape_changed = pyqtSignal(str)
+
+    
+
+    def __init__(self,parent_instance, parent=None ):
+        super().__init__(parent)
+        self.parent_instance = parent_instance
+        self.pathName = parent_instance.pathName
+        self.fileName = parent_instance.fileName
+
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout) # Set the main layout for the QWidget
+        self.button1 = QPushButton("Salva File", self)
+        self.button2 = QPushButton("Stream File", self)
+        self.button1.clicked.connect(self.on_button1_clicked)
+        self.button2.clicked.connect(self.on_button2_clicked)
+        self.layout.addWidget(self.button1)
+        self.layout.addWidget(self.button2)
+
+        # --- Color ---
+        color_section_layout = QHBoxLayout() # Use a more descriptive name
+        self.color_label = QLabel("Color:")
+        # default con colori vicino ai neri idk pk non funzia nel scegliere
+        self.current_color = QColor("#0000ff")
+
+        self.color_preview = QLabel()
+        self.color_preview.setFixedSize(40, 20)
+        self.color_preview.setStyleSheet(
+            f"background-color: {self.current_color.name()}; border: 1px solid black;"
+        )
+                                        
+        self.color_button = QPushButton("Change Color")
+        self.color_button.clicked.connect(self.choose_color)
+
+        color_section_layout.addWidget(self.color_label)
+        color_section_layout.addWidget(self.color_preview)
+        color_section_layout.addWidget(self.color_button)
+        self.layout.addLayout(color_section_layout) # Add color section to main layout
+
+        # --- Brush Size ---
+        brush_section_layout = QHBoxLayout() # Horizontal layout for brush controls
+        self.size_label = QLabel()  # Text will be set by change_brush_size
+        self.size_slider = QSlider(Qt.Horizontal)
+        self.size_slider.setRange(1, 30)
+        self.size_slider.valueChanged.connect(self.change_brush_size)
+        
+        brush_section_layout.addWidget(self.size_label)
+        brush_section_layout.addWidget(self.size_slider)
+        self.layout.addLayout(brush_section_layout) # Add brush section to main layout
+
+        # Initialize brush size (this will also set the label text and slider position)
+        self.change_brush_size(3) 
+
+        # --- Shape Selection ---
+        shape_section_layout = QHBoxLayout() # Horizontal layout for shape controls
+        self.shape_label = QLabel("Shape:")
+        self.shape_selector = QComboBox()
+        self.shape_selector.addItems(["Freehand", "Square", "Rectangle", "Circle"])
+        self.shape_selector.currentTextChanged.connect(self.shape_changed.emit)
+
+        shape_section_layout.addWidget(self.shape_label)
+        shape_section_layout.addWidget(self.shape_selector)
+        self.layout.addLayout(shape_section_layout) # Add shape section to main layout
+
+        # Add a spacer at the bottom to push everything up if more vertical space is available
+        # self.layout.addStretch(1) # Optional: uncomment if you want controls to group at the top
+
+    def choose_color(self):
+        # Restored initial and parent arguments for better UX
+        color = QColorDialog.getColor(initial=self.current_color, parent=self)
+        if color.isValid():
+            # print("aaa") # Debug print, can be removed
+            self.update_color(color)
+
+    def update_color(self, color: QColor):
+        self.current_color = color
+        self.color_preview.setStyleSheet(f"background-color: {color.name()}; border: 1px solid black;")
+        self.color_changed.emit(color)
+
+    def change_brush_size(self, value: int):
+        if self.size_slider.value() != value: # Sync slider if value comes from elsewhere
+            self.size_slider.setValue(value)
+        self.size_label.setText(f"Brush Size: {value}")
+        self.brush_size_changed.emit(value)
+
+    """ 
+    def get_color(self) -> QColor:
+        return self.current_color
+
+    def get_brush_size(self) -> int:
+        return self.size_slider.value()
+
+    def get_shape(self) -> str:
+        return self.shape_selector.currentText()
+    """
+
+    def get_color(self):
+        return self.current_color
+
+    def get_brush_size(self):
+        return self.size_slider.value()
+
+    def get_shape(self):
+        return self.shape_selector.currentText()
+    
+
+    def on_button1_clicked(self):
+        #save button
+        self.parent_instance.clear_file(self.pathName)
+        stringa_json = json.dumps(self.parent_instance.drawing_history, indent=4, ensure_ascii=False)
+        try:
+                # Apri il file in modalitÃ  scrittura ('w').
+                # Se il file esiste, il suo contenuto viene cancellato prima di scrivere.
+                # Se il file non esiste, viene creato.
+                # Usiamo encoding='utf-8' per gestire correttamente vari caratteri.
+                with open(self.pathName, 'w', encoding='utf-8') as file_oggetto:
+                    # Scrivi la stringa JSON nel file
+                    file_oggetto.write(stringa_json)
+
+                print(f"\nStringa JSON salvata con successo in '{self.pathName}'")
+
+        except Exception as e:
+                    print(f"\nErrore durante il salvataggio della stringa JSON nel file: {e}")
+        pass
+
+    def on_button2_clicked(self):
+        if (self.parent_instance.server == None):
+            print("Attivato Server")
+            self.parent_instance.server = WhiteboardServer(self.parent_instance.drawing_history)
+            self.parent_instance.serverThread = threading.Thread(target=self.parent_instance.server.start_server, daemon=True)
+            self.parent_instance.serverThread.start()
             try:
-                self.socket.sendall((message).encode('utf-8'))
+                print(self.parent_instance.socket)
+                self.parent_instance.socket.connect((self.parent_instance.ipAddress, int(self.parent_instance.remotePort)))
             except Exception as e:
-                print(f"Error sending data to server: {e}")
+                print(f"Error connecting to server at {self.parent_instance.ipAddress}:{self.parent_instance.remotePort}: {e}")
+                print("Please make sure the server is running and the host/port are correct.")
+                sys.exit(1)
 
-            self.last_point = event.pos()
+            self.parent_instance.listen_thread = threading.Thread(target=self.parent_instance.listen_server, daemon=True)
+            self.parent_instance.listen_thread.start()
+        
+        # Add your desired functionality for Button 2 here
 
-    def mouseReleaseEvent(self, event):
-        """Handles mouse release events for drawing."""
-        if event.button() == Qt.LeftButton:
-            self.drawing = False
-            self.last_point = None
 
+    
 if __name__ == "__main__":
     # Start the client on the main thread
     app = QApplication(sys.argv)
