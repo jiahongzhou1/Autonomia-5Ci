@@ -5,8 +5,8 @@ La nostra applicazione è formato da un launcher, e paintclient
 ### Launcher
 Nel launcher è il punto di ingresso della nostra applicazione, permette di: 
 - Scegliere disegni esistenti: selezionare il file Json da drive locale per iniziare una sessione.a
-- Avviare una sessione di condivisione (Server): trasforma tua applicazione in un server, cosi altri possono connetterti inserendo tuo ip e porta.a
-- Connetterti a una sessione (Client): inserendo ip e porta di altro client che sta condividendo
+- Avviare una sessione di condivisione (Server): trasforma tua applicazione in un server, cosi altri possono connetterti inserendo tuo ip e porta
+- Connetterti a una sessione (Client): inserendo ip e porta di altro client che sta condividendo la sua lavagna
 ### PainClient
 Il paint client è composto da 2 componenti, ToolStatusPanel e Canva.agli
 Dal ToolStatusPanel puoi scegliere colore, brush size, e modalità di disegno
