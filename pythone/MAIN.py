@@ -113,18 +113,29 @@ class WhiteboardServer:
         """
         print(f"[+] New connection from {addr}")
         # Send existing drawing history to the newly connected client
-        for item in self.drawing_history:
-            tmp = self.encode_message(item['type'], item['start_x'], item['start_y'],
-                                      item['end_x'], item['end_y'], item['color'], item['size'])
-            print(tmp)
-            try:
-                # Send directly to the new client, not broadcast
-                conn.sendall(tmp.encode('utf-8'))
-            except Exception as e:
-                print(f"[SERVER] Error sending history to new client {addr}: {e}")
-                break # Stop sending history if there's an error
+        ipAdd , _ = addr
+        if(ipAdd != "127.0.0.1"):
+            tmp = ""
+            tmpInt = 0
+            for item in self.drawing_history:
+                tmp += self.encode_message(item['type'], item['start_x'], item['start_y'],
+                                        item['end_x'], item['end_y'], item['color'], item['size'])
+                if(tmpInt == 18):
+                    print(tmp)
+                    try:
+                        # Send directly to the new client, not broadcast
+                        conn.sendall(tmp.encode('utf-8'))
+                        tmpInt = 0
+                        tmp = ""
+                    except Exception as e:
+                        print(f"[SERVER] Error sending history to new client {addr}: {e}")
+                        break # Stop sending history if there's an error
+                tmpInt += 1
         while True:
-            data = conn.recv(4096).decode('utf-8')
+            try:
+                data = conn.recv(4096).decode('utf-8')
+            except Exception as e:
+                continue
             print(data)
             if(not data):
                 continue

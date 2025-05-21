@@ -230,6 +230,8 @@ class FileBrowserWindow(QMainWindow):
             self.files_layout.addWidget(no_folder_label)
 
     def file_box_clicked(self, filename = "tmp.json" , filepath = "Saves/tmp.json" , IP = "127.0.0.1" , PORT = "5000"):
+        env = os.environ.copy()
+        env["QT_OPENGL"] = "software"
         """
         Handles the click event on a file box, launching the client script
         with the selected file and the configured server details.
@@ -238,14 +240,14 @@ class FileBrowserWindow(QMainWindow):
             # Pass IP and Port as additional command-line arguments to client.py
             # You will need to modify client.py to accept and use these arguments.
             print(f"AAAAAAA{IP}")
-            subprocess.run([
+            subprocess.Popen([
                 sys.executable,
                 'client.py',
                 f'{filename}',
                 f'{filepath}',
                 f'{IP}',
                 f'{PORT}'
-            ], check=True) # Use check=True to raise CalledProcessError on non-zero exit codes
+            ], cwd=SCRIPT_DIR , env=env) # Use check=True to raise CalledProcessError on non-zero exit codes
         except subprocess.CalledProcessError as e:
             QMessageBox.critical(self, "Client Launch Error", f"Client script failed with error: {e}")
             print("Script failed:", e)
