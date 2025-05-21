@@ -62,8 +62,8 @@ def decode_message(data):
 # Client Code
 # Inherit from QmainWindow
 class PaintClient(QMainWindow):
-    # constructor
-    socketLost = pyqtSignal(bool)
+    """Main window for the paint client application."""
+
     def __init__(self):
         # call the parent constructor
         super().__init__()
@@ -217,13 +217,7 @@ class PaintClient(QMainWindow):
         # The QScrollArea handles displaying the fixed-size canvas within the resized window.
         # No need to redraw the pixmap here.
         super().resizeEvent(event) # Call the base class implementation
-    
-    def onDisconnect(self):
-        QMessageBox.warning(self,"Tab Closing soon" , "Connection with host lost")
-        time.sleep(1)
-        QApplication.quit()
 
-    # updates the canva
     def update_canvas(self, preview=False):
         temp_pixmap = QPixmap(self.canvas_pixmap.size())
         temp_pixmap.fill(Qt.white)
@@ -272,29 +266,10 @@ class PaintClient(QMainWindow):
         painter.end()
         self.canvas.setPixmap(temp_pixmap)
         self.canvas.update()
-    # split the messages from server into information about a single segment.
-
-    def is_socket_alive(self): # <--- Put the new method here
-        if self.socket is None:
-            return False
-        try:
-            # Try sending a 0-byte message
-            self.socket.send(b'')
-            return True
-        except socket.error as e:
-            if e.errno in (errno.ECONNRESET, errno.ENOTCONN, errno.EPIPE):
-                return False
-            # For non-blocking sockets, a "would block" error isn't a disconnection
-            try:                
-                if e.errno == errno.EAGAIN or e.errno == errno.EWOULDBLOCK or e.errno == 10035: # Windows WSAEWOULDBLOCK
-                    return True
-            except ImportError:
-                pass
-            print(f"Socket check failed: {e}")
-            return False
 
     def listen_server(self):
         """Listens for data from the server in a separate thread."""
+        buffer = "" # Use a buffer to handle partial messages
         while True:
             if not self.is_socket_alive():
                 self.socketLost.emit(True)
