@@ -6,7 +6,7 @@ import os
 import math
 import time
 import errno
-from MAIN import WhiteboardServer
+from LocalServer import WhiteboardServer
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QSizePolicy, QVBoxLayout, QWidget, QScrollArea, QColorDialog, QPushButton , QMessageBox, QInputDialog# Import QScrollArea
 from PyQt5.QtGui import QPainter, QPen, QPixmap, QColor, QMouseEvent, QCloseEvent
@@ -261,6 +261,8 @@ class PaintClient(QMainWindow):
         self.canvas.update()
 
     def onDisconnect(self):
+        if(self.ipAddress == "127.0.0.1"):
+            return
         QMessageBox.warning(self,"Chiusura Applicazione","Connesione con l'host perso")
         time.sleep(1)
         QApplication.quit()

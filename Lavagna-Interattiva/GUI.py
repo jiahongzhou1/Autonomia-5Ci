@@ -206,6 +206,8 @@ class FileBrowserWindow(QMainWindow):
                 if files:
                     # Create a ClickableFrame for each file and connect its clicked signal
                     for filename in files:
+                        if(filename == "tmp.json"):
+                            continue
                         # Create an instance of our new ClickableFrame class
                         file_box = ClickableFrame(filename, self)
                         # Connect the clicked signal to a handler method, passing the filename
