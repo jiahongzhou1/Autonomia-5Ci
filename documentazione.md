@@ -1,3 +1,5 @@
+# PS: FARE `pip install pyqt5` PRIMA DI FAR PARTIRE!!!
+
 # Lavagna condivisa
 
 La nostra applicazione offre una lavagna condivisa tramite un launcher. Dal launcher puoi scegliere dei disegni in formato json salvati in locale e puoi streamarli agli altri client, oppure puoi collegarti alle lavagne di altre persone inserendo loro indirizzo ip e porta
